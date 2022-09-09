@@ -1,0 +1,108 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "yourEmailAddress":{
+            "type": "string"
+        },
+        "date": {
+            "type": "string",
+            "defaultValue": "[utcNow('d')]",
+            "metadata": {
+                "description": "Do NOT Edit!"
+            }
+        }
+    },
+    "variables": {
+        "vnetName": "[concat('vnet-Default-',resourceGroup().location)]",
+        "addressSpaces": "172.16.0.0/16",
+        "ipv6Enabled": false,
+        "subnetCount": 4,
+        "subnet0_name":"GatewaySubnet",
+        "subnet0_addressRange": "172.16.1.0/24",
+        "subnet1_name": "AzureBastionSubnet",
+        "subnet1_addressRange": "172.16.2.0/24",
+        "subnet2_name": "DefaultSubnet",
+        "subnet2_addressRange": "172.16.3.0/24",
+        "subnet3_name": "AVDSubnet",
+        "subnet3_addressRange": "172.16.4.0/24",
+        "ddosProtectionPlanEnabled": false,
+        "firewallEnabled": false,
+        "bastionEnabled": false,
+        "vnetRole": "Default Azure Network",
+        "vnetCost": "Network",
+
+        "networkSecurityGroupName": "[concat('nsg-Default-', resourceGroup().location)]",
+        "nsgRole": "[concat('NSG for DefaultSubnet in vnet-Default-', resourceGroup().location)]",
+        "nsgCost": "Network"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-02-01",
+            "name": "[variables('networkSecurityGroupName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "Name": "[variables('networkSecurityGroupName')]",
+                "Role": "[variables('nsgRole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('nsgCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Network/VirtualNetworks",
+            "apiVersion": "2021-01-01",
+            "name": "[variables('vnetName')]",    
+            "location": "[resourceGroup().location]",        
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('vnetName')]",
+                "Role": "[variables('vnetRole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('vnetCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('addressSpaces')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnet0_name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnet0_addressRange')]"
+                        }
+                    },
+                    {
+                        "name": "[variables('subnet1_name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnet1_addressRange')]"
+                        }
+                    },
+                    {
+                        "name": "[variables('subnet2_name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnet2_addressRange')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "[variables('subnet3_name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnet3_addressRange')]"
+                        }
+                    }
+                ],
+                "enableDdosProtection": "[variables('ddosProtectionPlanEnabled')]"
+            }
+        }
+    ]
+}
