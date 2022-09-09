@@ -1,0 +1,140 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "yourEmailAddress":{
+            "type": "string"
+        },
+        "customerPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Use 3-4 lowercase characters"
+            }
+        },
+        "date": {
+            "type": "string",
+            "defaultValue": "[utcNow('d')]"
+        }
+    },
+    "variables": {
+        "storageAccountName": "[concat(tolower(parameters('customerPrefix')), 'diag',resourceGroup().location)]",
+        "accountType": "Standard_LRS",
+        "kind": "StorageV2",
+        "accessTier": "Hot",
+        "minimumTlsVersion": "TLS1_2",
+        "supportsHttpsTrafficOnly": true,
+        "allowBlobPublicAccess": true,
+        "allowSharedKeyAccess": true,
+        "allowCrossTenantReplication": false,
+        "defaultOAuth": false,
+        "networkAclsBypass": "AzureServices",
+        "networkAclsDefaultAction": "Allow",
+        "keySource": "Microsoft.Storage",
+        "encryptionEnabled":true,
+        "infrastructureEncryptionEnabled": false,
+        "isContainerRestoreEnabled": false,
+        "isBlobSoftDeleteEnabled": true,
+        "blobSoftDeleteRetentionDays": 7,
+        "isContainerSoftDeleteEnabled": true,
+        "containerSoftDeleteRetentionDays": 7,
+        "changeFeed": false,
+        "isVersioningEnabled": false,
+        "isShareSoftDeleteEnabled": true,
+        "shareSoftDeleteRetentionDays": 7,
+        "storageRole": "Diagnostic Storage",
+        "storageCost": "Logs"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-08-01",
+            "name": "[variables('storageAccountName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [],
+            "tags": {
+                "Name": "[variables('storageAccountName')]",
+                "Role": "[variables('storageRole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('storageCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "sku": {
+                "name": "[variables('accountType')]"
+            },
+            "kind": "[variables('kind')]",
+            "properties": {
+                "accessTier": "[variables('accessTier')]",
+                "minimumTlsVersion": "[variables('minimumTlsVersion')]",
+                "supportsHttpsTrafficOnly": "[variables('supportsHttpsTrafficOnly')]",
+                "allowBlobPublicAccess": "[variables('allowBlobPublicAccess')]",
+                "allowSharedKeyAccess": "[variables('allowSharedKeyAccess')]",
+                "allowCrossTenantReplication": "[variables('allowCrossTenantReplication')]",
+                "defaultToOAuthAuthentication": "[variables('defaultOAuth')]",
+                "networkAcls": {
+                    "bypass": "[variables('networkAclsBypass')]",
+                    "defaultAction": "[variables('networkAclsDefaultAction')]",
+                    "ipRules": []
+                },
+                "encryption": {
+                    "keySource": "[variables('keySource')]",
+                    "services": {
+                        "blob": {
+                            "enabled": "[variables('encryptionEnabled')]"
+                        },
+                        "file": {
+                            "enabled": "[variables('encryptionEnabled')]"
+                        },
+                        "table": {
+                            "enabled": "[variables('encryptionEnabled')]"
+                        },
+                        "queue": {
+                            "enabled": "[variables('encryptionEnabled')]"
+                        }
+                    },
+                    "requireInfrastructureEncryption": "[variables('infrastructureEncryptionEnabled')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices",
+            "apiVersion": "2021-08-01",
+            "name": "[concat(variables('storageAccountName'), '/default')]",
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+            ],
+            "properties": {
+                "restorePolicy": {
+                    "enabled": "[variables('isContainerRestoreEnabled')]"
+                },
+                "deleteRetentionPolicy": {
+                    "enabled": "[variables('isBlobSoftDeleteEnabled')]",
+                    "days": "[variables('blobSoftDeleteRetentionDays')]"
+                },
+                "containerDeleteRetentionPolicy": {
+                    "enabled": "[variables('isContainerSoftDeleteEnabled')]",
+                    "days": "[variables('containerSoftDeleteRetentionDays')]"
+                },
+                "changeFeed": {
+                    "enabled": "[variables('changeFeed')]"
+                },
+                "isVersioningEnabled": "[variables('isVersioningEnabled')]"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileservices",
+            "apiVersion": "2021-08-01",
+            "name": "[concat(variables('storageAccountName'), '/default')]",
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+                "[concat(concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName')), '/blobServices/default')]"
+            ],
+            "properties": {
+                "shareDeleteRetentionPolicy": {
+                    "enabled": "[variables('isShareSoftDeleteEnabled')]",
+                    "days": "[variables('shareSoftDeleteRetentionDays')]"
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
