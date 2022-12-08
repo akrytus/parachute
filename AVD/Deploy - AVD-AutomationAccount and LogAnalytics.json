@@ -1,0 +1,88 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "2.0.0.0",
+    "parameters": {
+        "yourEmailAddress":{
+            "type": "string"
+        },
+        "customerPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Use 3-4 lowercase characters"
+            }
+        },
+        "date": {
+            "type": "string",
+            "defaultValue": "[utcNow('d')]",
+            "metadata": {
+                "description": "Do NOT Edit!"
+            }
+        }
+    },
+    "variables": {
+        "workspaceName": "[concat(toUpper(parameters('customerPrefix')), '-LogAnalytics-AVD')]",
+        "workspaceRole": "Default Workspace",
+        "workspaceCost": "Logs",
+        "workspaceSku": "pergb2018",
+        "accountName": "[concat(toUpper(parameters('customerPrefix')), '-AVD-Automation')]",
+        "accountRole": "Automate AVD resources",
+        "accountCost": "Logs"
+        
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Automation/automationAccounts",
+            "apiVersion": "2021-06-22",
+            "name": "[variables('accountName')]",
+            "location": "[resourceGroup().location]",  
+            "dependsOn": [],
+            "tags": {
+                "Name": "[variables('accountName')]",
+                "Role": "[variables('accountRole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('accountCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "sku": {
+                    "name": "Basic"
+                },
+                "publicNetworkAccess": true
+            }      
+        },
+        {
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "apiVersion": "2017-03-15-preview",
+            "name": "[variables('workspaceName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "Name": "[variables('workspaceName')]",
+                "Role": "[variables('workspaceRole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('workspaceCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "sku": {
+                    "name": "[variables('workspaceSku')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.OperationalInsights/workspaces/linkedServices",
+            "apiVersion": "2020-08-01",
+            "name": "[concat(variables('workspaceName'), '/' , 'Automation')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+              "[variables('workspaceName')]",
+              "[variables('accountName')]"
+            ],
+            "properties": {
+              "resourceId": "[resourceId('Microsoft.Automation/automationAccounts', variables('accountName'))]"
+            }
+          }
+    ]
+}

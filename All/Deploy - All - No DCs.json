@@ -1,0 +1,721 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "yourEmailAddress":{
+            "type": "string"
+        },
+        "localNetworkGatewayName": {
+            "type": "String",
+            "metadata": {
+            "description": "Syntax Location-Interface#> (ie 'SanRamon-WAN1')"
+            }
+        },
+        "gatewayIpAddress": {
+            "type": "String",
+            "metadata": {
+            "description": "Public IP of client Firewall"
+            }
+        },
+        "addressPrefixes": {
+            "type": "Array",
+            "metadata": {
+            "description": "Internal client Subnet(s) - Square brackets, DOUBLE QUOTES, CIDR and commas - ie ['10.10.10.0/24','10.5.1.0/24']"
+            }
+        },
+        "sharedKey": {
+            "type": "String",
+            "metadata": {
+            "description": "Shared Secret"
+            }
+        },
+        "customerPrefix": {
+            "type": "String",
+            "metadata": {
+            "description": "Use 4 characters or less to identify the customer - ie: 'PAR' for Parachute"
+            }
+        },
+        "adminPassword": {
+            "type": "SecureString",
+            "metadata": {
+                "description": "Use the ParadminLocal password in ITG"
+            }
+        },
+        "enableBastion": {
+            "type": "string",
+           
+            "allowedValues": [
+                "Yes",
+                "No"
+            ],
+             "metadata":{
+                "description": "Bastion allows RDP access from Azure Portal (~$140/month)"
+            }
+        },
+        "date": {
+            "type": "string",
+            "defaultValue": "[utcNow('d')]",
+            "metadata": {
+            "description": "Do NOT Edit!"
+            }
+        }
+    },
+    "variables": {
+        "vnetName": "[concat(toupper(parameters('customerPrefix')),'-Default-',resourceGroup().location, '-vnet')]",
+        "addressSpaces": "172.16.0.0/16",
+        "ipv6Enabled": false,
+        "subnet0_name":"GatewaySubnet",
+        "subnet0_addressRange": "172.16.1.0/24",
+        "subnet1_name": "AzureBastionSubnet",
+        "subnet1_addressRange": "172.16.2.0/24",
+        "subnet2_name": "DefaultSubnet",
+        "subnet2_addressRange": "172.16.3.0/24",
+        "subnet3_name": "AVDSubnet",
+        "subnet3_addressRange": "172.16.4.0/24",
+        "ddosProtectionPlanEnabled": false,
+        "firewallEnabled": false,
+        "bastionEnabled": false,
+        "vnetRole": "Default Azure Network",
+        "vnetCost": "Network",
+
+        "networkSecurityGroupName": "[concat(toupper(parameters('customerPrefix')),'-Default-', resourceGroup().location, '-nsg')]",
+        "nsgRole": "[concat('NSG for DefaultSubnet in ', variables('vnetName'))]",
+        "nsgCost": "Network",
+
+        "gwPublicIPName": "[concat(toupper(parameters('customerPrefix')), '-AzureGateway-pip')]",
+        "bastionPublicIPName": "[concat(toupper(parameters('customerPrefix')), '-Bastion-pip')]",
+        "bastionName": "[concat(toupper(parameters('customerPrefix')), '-Bastion')]",
+
+        "publicIPSku": "Standard",
+        "publicIPTier": "Regional",
+        "publicIPAllocationMethod": "Static",
+        "publicIPIdleTimeoutInMinutes": 4,
+        "publicIpAddressVersion": "IPv4",
+        "publicIPCost": "Network",
+
+        "gatewayName": "[concat(toupper(parameters('customerPrefix')), '-AzureGateway')]",
+        "gatewayType": "Vpn",
+        "gatewaySku": "VpnGw1",
+        "vpnGatewayGeneration": "Generation1",
+        "vpnType": "RouteBased",
+        "subnetName": "GatewaySubnet",
+        "subnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]",
+        "gatewayCost": "Network",
+
+        "virtualNetworkGatewayId": "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('gatewayName') )]",
+        "localGatewayCost": "Network",
+        "connectionName": "[concat(toupper(parameters('customerPrefix')), '-', parameters('localNetworkGatewayName'),'-Connection')]",
+        "connectionType": "IPsec",
+        "useLocalAzureIpAddress": false,
+        "enableBgp": false,
+        "connectionProtocol": "IKEv2",
+        "usePolicyBasedTrafficSelectors": false,
+        "dpdTimeoutSeconds": 45,
+        "connectionMode": "Default",
+        "localNetworkGatewayId": "[resourceId('Microsoft.Network/localNetworkGateways', parameters('localNetworkGatewayName'))]",
+        "ipsecPolicies": [],
+        "ingressNatRules": [],
+        "egressNatRules": [],
+        "connectionRole": "[concat('S2S VPN Tunnel to', toupper(parameters('customerPrefix')), '-', parameters('localNetworkGatewayName'))]",
+        "connectionCost": "Network",
+
+        "storageAccountName": "[concat(tolower(parameters('customerPrefix')), 'diag',resourceGroup().location)]",
+        "accountType": "Standard_LRS",
+        "kind": "StorageV2",
+        "accessTier": "Hot",
+        "minimumTlsVersion": "TLS1_2",
+        "supportsHttpsTrafficOnly": true,
+        "allowBlobPublicAccess": true,
+        "allowSharedKeyAccess": true,
+        "allowCrossTenantReplication": false,
+        "defaultOAuth": false,
+        "networkAclsBypass": "AzureServices",
+        "networkAclsDefaultAction": "Allow",
+        "keySource": "Microsoft.Storage",
+        "encryptionEnabled":true,
+        "infrastructureEncryptionEnabled": false,
+        "isContainerRestoreEnabled": false,
+        "isBlobSoftDeleteEnabled": true,
+        "blobSoftDeleteRetentionDays": 7,
+        "isContainerSoftDeleteEnabled": true,
+        "containerSoftDeleteRetentionDays": 7,
+        "changeFeed": false,
+        "isVersioningEnabled": false,
+        "isShareSoftDeleteEnabled": true,
+        "shareSoftDeleteRetentionDays": 7,
+        "storageRole": "Diagnostic Storage",
+        "storageCost": "Logs",
+
+        "vaultName": "[concat(toupper(parameters('customerPrefix')), '-Backup-',resourceGroup().location)]",
+        "vaultrole": "[concat('Backup Vault for', resourceGroup().location,' resources')]",
+        "backupCost": "Backup",
+
+        "policyType": "V1",
+        "timeZone": "Pacific Standard Time",
+        "instantRPDetails": {"azureBackupRGNamePrefix":"[concat(toupper(parameters('customerPrefix')),'-BackupItems-',resourceGroup().location)]","azureBackupRGNameSuffix":""},
+        "backupManagementType": "AzureIaasVM",      
+        
+        "defaultPolicyName": "Default-Server-Policy",
+        "defaultInstantRpRetentionRangeInDays": 3,
+        "defaultSchedule": {"schedulePolicyType":"SimpleSchedulePolicy","scheduleRunFrequency":"Daily","scheduleRunDays":null,"scheduleRunTimes":["2022-01-20T20:00:00.000Z"]},
+        "defaultRetention": {"retentionPolicyType":"LongTermRetentionPolicy","dailySchedule":{"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":30,"durationType":"Days"}},"weeklySchedule":{"daysOfTheWeek":["Sunday"],"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":12,"durationType":"Weeks"}},"monthlySchedule":null,"yearlySchedule":null},
+        "defaultrole": "Policy for Default Servers",
+        
+        "dcPolicyName": "DC-Server-Policy",
+        "dcInstantRpRetentionRangeInDays": 2,
+        "dcSchedule": {"schedulePolicyType":"SimpleSchedulePolicy","scheduleRunFrequency":"Daily","scheduleRunDays":null,"scheduleRunTimes":["2022-01-20T18:00:00.000Z"]},
+        "dcRetention": {"retentionPolicyType":"LongTermRetentionPolicy","dailySchedule":{"retentionTimes":["2022-01-20T18:00:00.000Z"],"retentionDuration":{"count":30,"durationType":"Days"}},"weeklySchedule":{"daysOfTheWeek":["Sunday"],"retentionTimes":["2022-01-20T18:00:00.000Z"],"retentionDuration":{"count":4,"durationType":"Weeks"}},"monthlySchedule":null,"yearlySchedule":null},
+        "dcrole": "Policy for Domain Controllers",
+
+        "avdPolicyName": "AVD-Personal-Policy",
+        "avdInstantRpRetentionRangeInDays": 2,
+        "avdSchedule": {"schedulePolicyType":"SimpleSchedulePolicy","scheduleRunFrequency":"Daily","scheduleRunDays":null,"scheduleRunTimes":["2022-01-20T18:00:00.000Z"]},
+        "avdRetention": {"retentionPolicyType":"LongTermRetentionPolicy","dailySchedule":{"retentionTimes":["2022-01-20T18:00:00.000Z"],"retentionDuration":{"count":15,"durationType":"Days"}},"weeklySchedule":{"daysOfTheWeek":["Sunday"],"retentionTimes":["2022-01-20T18:00:00.000Z"],"retentionDuration":{"count":4,"durationType":"Weeks"}},"monthlySchedule":null,"yearlySchedule":null},
+        "avdrole": "Policy for AVD Personal Hosts",
+
+        "afsPolicyName": "Azure-Files-Policy",
+        "afsBackupManagementType": "AzureStorage",
+        "afsWorkloadType": "AzureFileShare",
+        "afsSchedule": {"schedulePolicyType":"SimpleSchedulePolicy","scheduleRunFrequency":"Daily","scheduleRunDays":null,"scheduleRunTimes":["2022-01-20T20:00:00.000Z"]},
+        "afsRetention": {"retentionPolicyType":"LongTermRetentionPolicy","dailySchedule":{"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":30,"durationType":"Days"}},"weeklySchedule":{"daysOfTheWeek":["Sunday"],"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":4,"durationType":"Weeks"}},"monthlySchedule":{"retentionScheduleFormatType":"Weekly","retentionScheduleDaily":null,"retentionScheduleWeekly":{"daysOfTheWeek":["Sunday"],"weeksOfTheMonth":["First"]},"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":6,"durationType":"Months"}},"yearlySchedule":null},
+        "afsrole": "Policy for Azure Files",
+
+        "workspaceName": "[concat(toupper(parameters('customerPrefix')),'-Default-LogAnalytics')]",
+        "workspaceRole": "Default Workspace",
+        "workspaceCost": "Logs",
+        "workspaceSku": "pergb2018",
+        "accountName": "[concat(toUpper(parameters('customerPrefix')), '-Default-Automation')]",
+        "accountRole": "Automate Default resources",
+        "accountCost": "Logs",
+
+        "virtualMachineName1": "[concat(toupper(parameters('customerPrefix')), '-AZ-DC-01')]",
+        "virtualMachineComputerName1": "[concat(toupper(parameters('customerPrefix')), '-AZ-DC-01')]",
+        "virtualMachineName2": "[concat(toupper(parameters('customerPrefix')), '-AZ-DC-02')]",
+        "virtualMachineComputerName2": "[concat(toupper(parameters('customerPrefix')), '-AZ-DC-02')]",
+        "virtualMachineSize1": "Standard_B2ms",
+        "virtualMachineSize2": "Standard_B4ms",
+        "osDiskType": "Premium_LRS",
+        "adminUsername": "ParadminLocal",
+        "osDiskName1": "[concat(toupper(parameters('customerPrefix')), '-AZ-DC-01-OSDisk')]",
+        "osDiskName2": "[concat(toupper(parameters('customerPrefix')), '-AZ-DC-02-OSDisk')]",
+        "patchMode": "Manual",
+        "enableHotpatching": false,
+        "networkInterfaceName1": "[concat(toupper(parameters('customerPrefix')), '-AZ-DC-01-nic')]",
+        "networkInterfaceName2": "[concat(toupper(parameters('customerPrefix')), '-AZ-DC-02-nic')]",
+        "diagnosticsExtensionName": "Microsoft.Insights.VMDiagnosticsSettings",       
+        "diagnosticsStorageAccountName": "[concat(tolower(parameters('customerPrefix')), 'diag',resourceGroup().location)]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-02-01",
+            "name": "[variables('networkSecurityGroupName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "Name": "[variables('networkSecurityGroupName')]",
+                "Role": "[variables('nsgRole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('nsgCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Network/VirtualNetworks",
+            "apiVersion": "2021-01-01",
+            "name": "[variables('vnetName')]",    
+            "location": "[resourceGroup().location]",        
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('vnetName')]",
+                "Role": "[variables('vnetRole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('vnetCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('addressSpaces')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnet0_name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnet0_addressRange')]"
+                        }
+                    },
+                    {
+                        "name": "[variables('subnet1_name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnet1_addressRange')]"
+                        }
+                    },
+                    {
+                        "name": "[variables('subnet2_name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnet2_addressRange')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "[variables('subnet3_name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnet3_addressRange')]"
+                        }
+                    }
+                ],
+                "enableDdosProtection": "[variables('ddosProtectionPlanEnabled')]"
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-08-01",
+            "name": "[variables('gwPublicIPName')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "[variables('publicIPSku')]",
+                "tier": "[variables('publicIPTier')]"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "[variables('publicIPAllocationMethod')]",
+                "idleTimeoutInMinutes": "[variables('publicIPIdleTimeoutInMinutes')]",
+                "publicIpAddressVersion": "[variables('publicIpAddressVersion')]",
+                "ipTags": []
+            },
+            "tags": {
+                    "Name": "[variables('gwPublicIPName')]",
+                    "Role": "Azure VPN Gateway PIP",
+                    "Owner": "[parameters('yourEmailAddress')]",
+                    "Cost": "[variables('publicIPCost')]",
+                    "Date": "[parameters('date')]"
+            }
+        },
+        {
+            "condition": "[equals(parameters('enableBastion'), 'Yes')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-08-01",
+            "name": "[variables('bastionPublicIPName')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "[variables('publicIPSku')]",
+                "tier": "[variables('publicIPTier')]"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "[variables('publicIPAllocationMethod')]",
+                "idleTimeoutInMinutes": "[variables('publicIPIdleTimeoutInMinutes')]",
+                "publicIpAddressVersion": "[variables('publicIpAddressVersion')]",
+                "ipTags": []
+            },
+            "tags": {
+                    "Name": "[variables('bastionPublicIPName')]",
+                    "Role": "Azure Bastion PIP",
+                    "Owner": "[parameters('yourEmailAddress')]",
+                    "Cost": "[variables('publicIPCost')]",
+                    "Date": "[parameters('date')]"
+            }
+        },
+        {
+            "condition": "[equals(parameters('enableBastion'), 'Yes')]",
+            "type": "Microsoft.Network/bastionHosts",
+            "apiVersion": "2021-08-01",
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIPAddresses/', variables('bastionPublicIPName'))]",
+                "[concat('Microsoft.Network/VirtualNetworks/', variables('vnetName'))]"
+            ],
+            "name": "[variables('bastionName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "Name": "[variables('bastionName')]",
+                "Role": "Azure Bastion",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('publicIPCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "sku": {
+                "name": "Basic"
+            },
+            "properties": {
+                "disableCopyPaste": "False",
+                "enableFileCopy": "True",
+                "enableIpConnect": "False",
+                "enableShareableLink": "False",
+                "enableTunneling": "False",
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnet1_name'))]"
+                            },
+                            "publicIPAddress": {
+                            "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('bastionPublicIPName'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworkGateways",
+            "apiVersion": "2020-11-01",
+            "name": "[variables('gatewayName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIPAddresses/', variables('gwPublicIPName'))]",
+                "[concat('Microsoft.Network/VirtualNetworks/', variables('vnetName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('gatewayName')]",
+                "Role": "Azure VPN Gateway",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('gatewayCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "gatewayType": "[variables('gatewayType')]",
+                "ipConfigurations": [
+                    {
+                        "name": "default",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('subnetId')]"
+                            },
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('gwPublicIPName'))]"
+                            }
+                        }
+                    }
+                ],
+                "vpnType": "[variables('vpnType')]",
+                "vpnGatewayGeneration": "[variables('vpnGatewayGeneration')]",
+                "sku": {
+                    "name": "[variables('gatewaySku')]",
+                    "tier": "[variables('gatewaySku')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/localNetworkGateways",
+            "apiVersion": "2019-02-01",
+            "name": "[parameters('localNetworkGatewayName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [],
+            "properties": {
+                "localNetworkAddressSpace": {
+                    "addressPrefixes": "[parameters('addressPrefixes')]"
+                },
+                "gatewayIpAddress": "[parameters('gatewayIpAddress')]"
+            },
+            "tags": {
+                "Name": "[parameters('localNetworkGatewayName')]",
+                "Role": "Local Gateway",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('localGatewayCost')]",
+                "Date": "[parameters('date')]"
+            }
+        },
+        {
+            "type": "Microsoft.Network/connections",
+            "apiVersion": "2021-05-01",
+            "name": "[variables('connectionName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[parameters('localNetworkGatewayName')]",
+                "[variables('gatewayName')]"
+            ],
+            "tags": {
+                "Name": "[parameters('localNetworkGatewayName')]",
+                "Role": "[variables('connectionRole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('connectionCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "connectionType": "[variables('connectionType')]",
+                "virtualNetworkGateway1": {
+                    "id": "[variables('virtualNetworkGatewayId')]"
+                },
+                "useLocalAzureIpAddress": "[variables('useLocalAzureIpAddress')]",
+                "enableBgp": "[variables('enableBgp')]",
+                "connectionProtocol": "[variables('connectionProtocol')]",
+                "sharedKey": "[parameters('sharedKey')]",
+                "usePolicyBasedTrafficSelectors": "[variables('usePolicyBasedTrafficSelectors')]",
+                "dpdTimeoutSeconds": "[variables('dpdTimeoutSeconds')]",
+                "connectionMode": "[variables('connectionMode')]",
+                "ipsecPolicies": "[variables('ipsecPolicies')]",
+                "ingressNatRules": "[variables('ingressNatRules')]",
+                "egressNatRules": "[variables('egressNatRules')]",
+                "localNetworkGateway2": {
+                    "id": "[variables('localNetworkGatewayId')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-08-01",
+            "name": "[variables('storageAccountName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [],
+            "tags": {
+                "Name": "[variables('storageAccountName')]",
+                "Role": "[variables('storageRole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('storageCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "sku": {
+                "name": "[variables('accountType')]"
+            },
+            "kind": "[variables('kind')]",
+            "properties": {
+                "accessTier": "[variables('accessTier')]",
+                "minimumTlsVersion": "[variables('minimumTlsVersion')]",
+                "supportsHttpsTrafficOnly": "[variables('supportsHttpsTrafficOnly')]",
+                "allowBlobPublicAccess": "[variables('allowBlobPublicAccess')]",
+                "allowSharedKeyAccess": "[variables('allowSharedKeyAccess')]",
+                "allowCrossTenantReplication": "[variables('allowCrossTenantReplication')]",
+                "defaultToOAuthAuthentication": "[variables('defaultOAuth')]",
+                "networkAcls": {
+                    "bypass": "[variables('networkAclsBypass')]",
+                    "defaultAction": "[variables('networkAclsDefaultAction')]",
+                    "ipRules": []
+                },
+                "encryption": {
+                    "keySource": "[variables('keySource')]",
+                    "services": {
+                        "blob": {
+                            "enabled": "[variables('encryptionEnabled')]"
+                        },
+                        "file": {
+                            "enabled": "[variables('encryptionEnabled')]"
+                        },
+                        "table": {
+                            "enabled": "[variables('encryptionEnabled')]"
+                        },
+                        "queue": {
+                            "enabled": "[variables('encryptionEnabled')]"
+                        }
+                    },
+                    "requireInfrastructureEncryption": "[variables('infrastructureEncryptionEnabled')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices",
+            "apiVersion": "2021-08-01",
+            "name": "[concat(variables('storageAccountName'), '/default')]",
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+            ],
+            "properties": {
+                "restorePolicy": {
+                    "enabled": "[variables('isContainerRestoreEnabled')]"
+                },
+                "deleteRetentionPolicy": {
+                    "enabled": "[variables('isBlobSoftDeleteEnabled')]",
+                    "days": "[variables('blobSoftDeleteRetentionDays')]"
+                },
+                "containerDeleteRetentionPolicy": {
+                    "enabled": "[variables('isContainerSoftDeleteEnabled')]",
+                    "days": "[variables('containerSoftDeleteRetentionDays')]"
+                },
+                "changeFeed": {
+                    "enabled": "[variables('changeFeed')]"
+                },
+                "isVersioningEnabled": "[variables('isVersioningEnabled')]"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileservices",
+            "apiVersion": "2021-08-01",
+            "name": "[concat(variables('storageAccountName'), '/default')]",
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+                "[concat(concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName')), '/blobServices/default')]"
+            ],
+            "properties": {
+                "shareDeleteRetentionPolicy": {
+                    "enabled": "[variables('isShareSoftDeleteEnabled')]",
+                    "days": "[variables('shareSoftDeleteRetentionDays')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults",
+            "apiVersion": "2020-02-02",
+            "name": "[variables('vaultName')]",
+            "location": "[resourceGroup().location]",  
+            "tags": {
+                "Name": "[variables('vaultName')]",
+                "Role": "[variables('vaultrole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('backupCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "sku": {
+                "name": "RS0",
+                "tier": "Standard"
+            },
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults/backupPolicies",
+            "apiVersion": "2016-06-01",
+            "name": "[concat(variables('vaultName'), '/', variables('defaultPolicyName'))]",
+            "dependsOn": [
+                "[concat('Microsoft.RecoveryServices/vaults/', variables('vaultName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('defaultPolicyName')]",
+                "Role": "[variables('defaultrole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('backupCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "backupManagementType": "[variables('backupManagementType')]",
+                "policyType": "[variables('policyType')]",
+                "instantRpRetentionRangeInDays": "[variables('defaultInstantRpRetentionRangeInDays')]",
+                "schedulePolicy": "[variables('defaultSchedule')]",
+                "timeZone": "[variables('timeZone')]",
+                "retentionPolicy": "[variables('defaultRetention')]",
+                "instantRPDetails": "[variables('instantRPDetails')]"
+            }
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults/backupPolicies",
+            "apiVersion": "2016-06-01",
+            "name": "[concat(variables('vaultName'), '/', variables('dcPolicyName'))]",
+            "dependsOn": [
+                "[concat('Microsoft.RecoveryServices/vaults/', variables('vaultName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('dcPolicyName')]",
+                "Role": "[variables('dcrole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('backupCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "backupManagementType": "[variables('backupManagementType')]",
+                "policyType": "[variables('policyType')]",
+                "instantRpRetentionRangeInDays": "[variables('dcInstantRpRetentionRangeInDays')]",
+                "schedulePolicy": "[variables('dcSchedule')]",
+                "timeZone": "[variables('timeZone')]",
+                "retentionPolicy": "[variables('dcRetention')]",
+                "instantRPDetails": "[variables('instantRPDetails')]"
+            }
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults/backupPolicies",
+            "apiVersion": "2016-06-01",
+            "name": "[concat(variables('vaultName'), '/', variables('avdPolicyName'))]",
+            "dependsOn": [
+                "[concat('Microsoft.RecoveryServices/vaults/', variables('vaultName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('avdPolicyName')]",
+                "Role": "[variables('avdrole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('backupCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "backupManagementType": "[variables('backupManagementType')]",
+                "policyType": "[variables('policyType')]",
+                "instantRpRetentionRangeInDays": "[variables('avdInstantRpRetentionRangeInDays')]",
+                "schedulePolicy": "[variables('avdSchedule')]",
+                "timeZone": "[variables('timeZone')]",
+                "retentionPolicy": "[variables('avdRetention')]",
+                "instantRPDetails": "[variables('instantRPDetails')]"
+            }
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults/backupPolicies",
+            "apiVersion": "2016-06-01",
+            "name": "[concat(variables('vaultName'), '/', variables('afsPolicyName'))]",
+            "dependsOn": [
+                "[concat('Microsoft.RecoveryServices/vaults/', variables('vaultName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('afsPolicyName')]",
+                "Role": "[variables('afsrole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('backupCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "backupManagementType": "[variables('afsBackupManagementType')]",
+                "workloadType": "[variables('afsWorkloadType')]",
+                "schedulePolicy": "[variables('afsSchedule')]",
+                "timeZone": "[variables('timeZone')]",
+                "retentionPolicy": "[variables('afsRetention')]"
+            }
+        },
+        {
+            "type": "Microsoft.Automation/automationAccounts",
+            "apiVersion": "2021-06-22",
+            "name": "[variables('accountName')]",
+            "location": "[resourceGroup().location]",  
+            "dependsOn": [],
+            "tags": {
+                "Name": "[variables('accountName')]",
+                "Role": "[variables('accountRole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('accountCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "sku": {
+                    "name": "Basic"
+                },
+                "publicNetworkAccess": true
+            }      
+        },
+        {
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "apiVersion": "2017-03-15-preview",
+            "name": "[variables('workspaceName')]",
+            "location": "[resourceGroup().location]",
+             "dependsOn": [
+                "[concat('Microsoft.Network/VirtualNetworks/', variables('vnetName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('workspaceName')]",
+                "Role": "[variables('workspaceRole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('workspaceCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "sku": {
+                    "name": "[variables('workspaceSku')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.OperationalInsights/workspaces/linkedServices",
+            "apiVersion": "2020-08-01",
+            "name": "[concat(variables('workspaceName'), '/' , 'Automation')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+              "[variables('workspaceName')]",
+              "[variables('accountName')]"
+            ],
+            "properties": {
+              "resourceId": "[resourceId('Microsoft.Automation/automationAccounts', variables('accountName'))]"
+            }
+        }
+          
+    ]
+}

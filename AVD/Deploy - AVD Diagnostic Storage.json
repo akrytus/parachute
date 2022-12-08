@@ -1,0 +1,143 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+       "yourEmailAddress":{
+            "type": "string"
+        },
+        "customerPrefix": {
+            "type": "String",
+            "metadata": {
+            "description": "Use 4 characters or less to identify the customer - ie: 'PAR' for Parachute"
+            }
+        },
+        "date": {
+            "type": "string",
+            "defaultValue": "[utcNow('d')]",
+            "metadata": {
+            "description": "Do NOT Edit!"
+            }
+        }
+    },
+    "variables": {
+        "storageAccountNameAVD": "[concat(tolower(parameters('customerPrefix')), 'avddiag',resourceGroup().location)]",
+        "accountTypeAVD": "Standard_LRS",
+        "kindAVD": "StorageV2",
+        "accessTierAVD": "Hot",
+        "minimumTlsVersionAVD": "TLS1_2",
+        "supportsHttpsTrafficOnlyAVD": true,
+        "allowBlobPublicAccessAVD": true,
+        "allowSharedKeyAccessAVD": true,
+        "allowCrossTenantReplicationAVD": false,
+        "defaultOAuthAVD": false,
+        "networkAclsBypassAVD": "AzureServices",
+        "networkAclsDefaultActionAVD": "Allow",
+        "keySourceAVD": "Microsoft.Storage",
+        "encryptionEnabledAVD":true,
+        "infrastructureEncryptionEnabledAVD": false,
+        "isContainerRestoreEnabledAVD": false,
+        "isBlobSoftDeleteEnabledAVD": true,
+        "blobSoftDeleteRetentionDaysAVD": 7,
+        "isContainerSoftDeleteEnabledAVD": true,
+        "containerSoftDeleteRetentionDaysAVD": 7,
+        "changeFeedAVD": false,
+        "isVersioningEnabledAVD": false,
+        "isShareSoftDeleteEnabledAVD": true,
+        "shareSoftDeleteRetentionDaysAVD": 7,
+        "storageRoleAVD": "AVD Diagnostic Storage",
+        "storageCostAVD": "Logs"
+    },
+    "resources": [
+         {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-09-01",
+            "name": "[variables('storageAccountNameAVD')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [],
+            "tags": {
+                "Name": "[variables('storageAccountNameAVD')]",
+                "Role": "[variables('storageRoleAVD')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('storageCostAVD')]",
+                "Date": "[parameters('date')]"
+            },
+            "sku": {
+                "name": "[variables('accountTypeAVD')]"
+            },
+            "kind": "[variables('kindAVD')]",
+            "properties": {
+                "accessTier": "[variables('accessTierAVD')]",
+                "minimumTlsVersion": "[variables('minimumTlsVersionAVD')]",
+                "supportsHttpsTrafficOnly": "[variables('supportsHttpsTrafficOnlyAVD')]",
+                "allowBlobPublicAccess": "[variables('allowBlobPublicAccessAVD')]",
+                "allowSharedKeyAccess": "[variables('allowSharedKeyAccessAVD')]",
+                "allowCrossTenantReplication": "[variables('allowCrossTenantReplicationAVD')]",
+                "defaultToOAuthAuthentication": "[variables('defaultOAuthAVD')]",
+                "networkAcls": {
+                    "bypass": "[variables('networkAclsBypassAVD')]",
+                    "defaultAction": "[variables('networkAclsDefaultActionAVD')]",
+                    "ipRules": []
+                },
+                "encryption": {
+                    "keySource": "[variables('keySourceAVD')]",
+                    "services": {
+                        "blob": {
+                            "enabled": "[variables('encryptionEnabledAVD')]"
+                        },
+                        "file": {
+                            "enabled": "[variables('encryptionEnabledAVD')]"
+                        },
+                        "table": {
+                            "enabled": "[variables('encryptionEnabledAVD')]"
+                        },
+                        "queue": {
+                            "enabled": "[variables('encryptionEnabledAVD')]"
+                        }
+                    },
+                    "requireInfrastructureEncryption": "[variables('infrastructureEncryptionEnabledAVD')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices",
+            "apiVersion": "2021-08-01",
+            "name": "[concat(variables('storageAccountNameAVD'), '/default')]",
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountNameAVD'))]"
+            ],
+            "properties": {
+                "restorePolicy": {
+                    "enabled": "[variables('isContainerRestoreEnabledAVD')]"
+                },
+                "deleteRetentionPolicy": {
+                    "enabled": "[variables('isBlobSoftDeleteEnabledAVD')]",
+                    "days": "[variables('blobSoftDeleteRetentionDaysAVD')]"
+                },
+                "containerDeleteRetentionPolicy": {
+                    "enabled": "[variables('isContainerSoftDeleteEnabledAVD')]",
+                    "days": "[variables('containerSoftDeleteRetentionDaysAVD')]"
+                },
+                "changeFeed": {
+                    "enabled": "[variables('changeFeedAVD')]"
+                },
+                "isVersioningEnabled": "[variables('isVersioningEnabledAVD')]"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileservices",
+            "apiVersion": "2021-08-01",
+            "name": "[concat(variables('storageAccountNameAVD'), '/default')]",
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountNameAVD'))]",
+                "[concat(concat('Microsoft.Storage/storageAccounts/', variables('storageAccountNameAVD')), '/blobServices/default')]"
+            ],
+            "properties": {
+                "shareDeleteRetentionPolicy": {
+                    "enabled": "[variables('isShareSoftDeleteEnabledAVD')]",
+                    "days": "[variables('shareSoftDeleteRetentionDaysAVD')]"
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}

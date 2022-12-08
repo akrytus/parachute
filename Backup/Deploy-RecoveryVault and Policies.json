@@ -1,0 +1,168 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "yourEmailAddress":{
+            "type": "string"
+        },
+        "customerPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Use 3-4 lowercase characters"
+            }
+        },
+        "date": {
+            "type": "string",
+            "defaultValue": "[utcNow('d')]"
+        }
+    },
+    "variables": {
+        "vaultName": "[concat(parameters('customerPrefix'),'-Backup-',resourceGroup().location)]",
+        "vaultrole": "[concat('Backup Vault for',resourceGroup().location,' resources')]",
+        "backupCost": "Backup",        
+
+        "policyType": "V1",
+        "timeZone": "Pacific Standard Time",
+        "instantRPDetails": {"azureBackupRGNamePrefix":"[concat(toupper(parameters('customerPrefix')),'-BackupItems-',resourceGroup().location)]","azureBackupRGNameSuffix":""},
+        "backupManagementType": "AzureIaasVM",      
+        
+        "defaultPolicyName": "Default-Server-Policy",
+        "defaultInstantRpRetentionRangeInDays": 3,
+        "defaultSchedule": {"schedulePolicyType":"SimpleSchedulePolicy","scheduleRunFrequency":"Daily","scheduleRunDays":null,"scheduleRunTimes":["2022-01-20T20:00:00.000Z"]},
+        "defaultRetention": {"retentionPolicyType":"LongTermRetentionPolicy","dailySchedule":{"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":30,"durationType":"Days"}},"weeklySchedule":{"daysOfTheWeek":["Sunday"],"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":12,"durationType":"Weeks"}},"monthlySchedule":null,"yearlySchedule":null},
+        "defaultrole": "Policy for Default Servers",
+        
+        "dcPolicyName": "DC-Server-Policy",
+        "dcInstantRpRetentionRangeInDays": 2,
+        "dcSchedule": {"schedulePolicyType":"SimpleSchedulePolicy","scheduleRunFrequency":"Daily","scheduleRunDays":null,"scheduleRunTimes":["2022-01-20T18:00:00.000Z"]},
+        "dcRetention": {"retentionPolicyType":"LongTermRetentionPolicy","dailySchedule":{"retentionTimes":["2022-01-20T18:00:00.000Z"],"retentionDuration":{"count":30,"durationType":"Days"}},"weeklySchedule":{"daysOfTheWeek":["Sunday"],"retentionTimes":["2022-01-20T18:00:00.000Z"],"retentionDuration":{"count":4,"durationType":"Weeks"}},"monthlySchedule":null,"yearlySchedule":null},
+        "dcrole": "Policy for Domain Controllers",
+
+        "avdPolicyName": "AVD-Personal-Policy",
+        "avdInstantRpRetentionRangeInDays": 2,
+        "avdSchedule": {"schedulePolicyType":"SimpleSchedulePolicy","scheduleRunFrequency":"Daily","scheduleRunDays":null,"scheduleRunTimes":["2022-01-20T18:00:00.000Z"]},
+        "avdRetention": {"retentionPolicyType":"LongTermRetentionPolicy","dailySchedule":{"retentionTimes":["2022-01-20T18:00:00.000Z"],"retentionDuration":{"count":15,"durationType":"Days"}},"weeklySchedule":{"daysOfTheWeek":["Sunday"],"retentionTimes":["2022-01-20T18:00:00.000Z"],"retentionDuration":{"count":4,"durationType":"Weeks"}},"monthlySchedule":null,"yearlySchedule":null},
+        "avdrole": "Policy for AVD Personal Hosts",
+
+        "afsPolicyName": "Azure-Files-Policy",
+        "afsBackupManagementType": "AzureStorage",
+        "afsWorkloadType": "AzureFileShare",
+        "afsSchedule": {"schedulePolicyType":"SimpleSchedulePolicy","scheduleRunFrequency":"Daily","scheduleRunDays":null,"scheduleRunTimes":["2022-01-20T20:00:00.000Z"]},
+        "afsRetention": {"retentionPolicyType":"LongTermRetentionPolicy","dailySchedule":{"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":30,"durationType":"Days"}},"weeklySchedule":{"daysOfTheWeek":["Sunday"],"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":4,"durationType":"Weeks"}},"monthlySchedule":{"retentionScheduleFormatType":"Weekly","retentionScheduleDaily":null,"retentionScheduleWeekly":{"daysOfTheWeek":["Sunday"],"weeksOfTheMonth":["First"]},"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":6,"durationType":"Months"}},"yearlySchedule":null},
+        "afsrole": "Policy for Azure Files"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.RecoveryServices/vaults",
+            "apiVersion": "2020-02-02",
+            "name": "[variables('vaultName')]",
+            "location": "[resourceGroup().location]",  
+            "tags": {
+                "Name": "[variables('vaultName')]",
+                "Role": "[variables('vaultrole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('backupCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "sku": {
+                "name": "RS0",
+                "tier": "Standard"
+            },
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults/backupPolicies",
+            "apiVersion": "2016-06-01",
+            "name": "[concat(variables('vaultName'), '/', variables('defaultPolicyName'))]",
+            "dependsOn": [
+                "[concat('Microsoft.RecoveryServices/vaults/', variables('vaultName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('defaultPolicyName')]",
+                "Role": "[variables('defaultrole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('backupCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "backupManagementType": "[variables('backupManagementType')]",
+                "policyType": "[variables('policyType')]",
+                "instantRpRetentionRangeInDays": "[variables('defaultInstantRpRetentionRangeInDays')]",
+                "schedulePolicy": "[variables('defaultSchedule')]",
+                "timeZone": "[variables('timeZone')]",
+                "retentionPolicy": "[variables('defaultRetention')]",
+                "instantRPDetails": "[variables('instantRPDetails')]"
+            }
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults/backupPolicies",
+            "apiVersion": "2016-06-01",
+            "name": "[concat(variables('vaultName'), '/', variables('dcPolicyName'))]",
+            "dependsOn": [
+                "[concat('Microsoft.RecoveryServices/vaults/', variables('vaultName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('dcPolicyName')]",
+                "Role": "[variables('dcrole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('backupCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "backupManagementType": "[variables('backupManagementType')]",
+                "policyType": "[variables('policyType')]",
+                "instantRpRetentionRangeInDays": "[variables('dcInstantRpRetentionRangeInDays')]",
+                "schedulePolicy": "[variables('dcSchedule')]",
+                "timeZone": "[variables('timeZone')]",
+                "retentionPolicy": "[variables('dcRetention')]",
+                "instantRPDetails": "[variables('instantRPDetails')]"
+            }
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults/backupPolicies",
+            "apiVersion": "2016-06-01",
+            "name": "[concat(variables('vaultName'), '/', variables('avdPolicyName'))]",
+            "dependsOn": [
+                "[concat('Microsoft.RecoveryServices/vaults/', variables('vaultName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('avdPolicyName')]",
+                "Role": "[variables('avdrole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('backupCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "backupManagementType": "[variables('backupManagementType')]",
+                "policyType": "[variables('policyType')]",
+                "instantRpRetentionRangeInDays": "[variables('avdInstantRpRetentionRangeInDays')]",
+                "schedulePolicy": "[variables('avdSchedule')]",
+                "timeZone": "[variables('timeZone')]",
+                "retentionPolicy": "[variables('avdRetention')]",
+                "instantRPDetails": "[variables('instantRPDetails')]"
+            }
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults/backupPolicies",
+            "apiVersion": "2016-06-01",
+            "name": "[concat(variables('vaultName'), '/', variables('afsPolicyName'))]",
+            "dependsOn": [
+                "[concat('Microsoft.RecoveryServices/vaults/', variables('vaultName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('afsPolicyName')]",
+                "Role": "[variables('afsrole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('backupCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "backupManagementType": "[variables('afsBackupManagementType')]",
+                "workloadType": "[variables('afsWorkloadType')]",
+                "schedulePolicy": "[variables('afsSchedule')]",
+                "timeZone": "[variables('timeZone')]",
+                "retentionPolicy": "[variables('afsRetention')]"
+            }
+        }
+    ]
+}

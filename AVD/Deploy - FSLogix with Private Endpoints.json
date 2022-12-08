@@ -1,0 +1,240 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "yourEmailAddress":{
+            "type": "string"
+        },
+        "customerPrefix": {
+            "type": "String",
+            "metadata": {
+                "description": "Use 4 characters or less to identify the customer - ie: 'PAR' for Parachute"
+            }
+        },
+        "vnetRG": {
+            "type": "String",
+            "metadata": {
+                "description": "Resource Group of Virtual Network (Must be exact)"
+            }
+        },
+        "vnetName": {
+            "type": "String",
+            "metadata": {
+                "description": "Name of Virtual Network (Must be exact)"
+            }
+        },
+        "subnetName": {
+            "type": "String",
+            "metadata": {
+                "description": "Name of AVD Subnet (ARM Template = AVDSubnet)"
+            }
+        },       
+         "date": {
+            "type": "string",
+            "defaultValue": "[utcNow('d')]",
+            "metadata": {
+            "description": "Do NOT Edit!"
+            }
+        }        
+    },
+    "variables": {
+        "storageAccountNameAFS": "[concat(tolower(parameters('customerPrefix')), 'fslogix',resourceGroup().location)]",
+        "accountTypeAFS": "Premium_LRS",
+        "kindAFS": "FileStorage",
+        "minimumTlsVersionAFS": "TLS1_2",
+        "publicNetworkAccessAFS": "Disabled",
+        "allowedCopyScopeAFS": "PrivateLink",
+        "dnsEndpointTypeAFS": "Standard",
+        "largeFileSharesStateAFS": "Enabled",
+        
+        "supportsHttpsTrafficOnlyAFS": true,
+        "allowBlobPublicAccessAFS": false,
+        "allowSharedKeyAccessAFS": true,
+        "allowCrossTenantReplicationAFS": false,
+        "defaultOAuthAFS": false,
+        "networkAclsBypassAFS": "AzureServices",
+        "networkAclsDefaultActionAFS": "Deny",
+        "keySourceAFS": "Microsoft.Storage",
+        "encryptionEnabledAFS": true,
+        "infrastructureEncryptionEnabledAFS": false,
+        "isShareSoftDeleteEnabledAFS": true,
+        "shareSoftDeleteRetentionDaysAFS": 14,
+        "storageRoleAFS": "Diagnostic Storage",
+        "storageCostAFS": "Logs",
+
+        "endpointNameAFS": "[concat(toUpper(parameters('customerPrefix')), '-AVD-FSLogix-Endpoint')]",
+        "endpointRoleAFS": "Private Endpoint for FSlogix",
+        "endpointCostAFS": "AVD",
+        "privateDnsZoneAFS": "[string('privatelink.file.core.windows.net')]",
+        "privateDnsZoneRoleAFS": "DNS for AVD FSLogix Endpoint",
+        "privateDnsZoneCostAFS": "AVD",
+        "virtualNetworkLinkName" : "[concat(toUpper(parameters('customerPrefix')), '-FSLogix-Link')]",
+        "endpointLinkNameAFS": "[concat(variables('privateDnsZoneAFS'), '/', variables('virtualNetworkLinkName'))]",
+        "endpointLinkRoleAFS" : "Links AVDSubnet to FSLogix",
+        "endpointLinkCostAFS": "AVD"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-09-01",
+            "name": "[variables('storageAccountNameAFS')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [],
+            "tags": {
+                "Name": "[variables('storageAccountNameAFS')]",
+                "Role": "[variables('storageRoleAFS')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('storageCostAFS')]",
+                "Date": "[parameters('date')]"
+            },
+            "sku": {
+                "name": "[variables('accountTypeAFS')]"
+            },
+            "kind": "[variables('kindAFS')]",
+            "properties": {
+                "minimumTlsVersion": "[variables('minimumTlsVersionAFS')]",
+                "supportsHttpsTrafficOnly": "[variables('supportsHttpsTrafficOnlyAFS')]",
+                "publicNetworkAccess": "[variables('publicNetworkAccessAFS')]",
+                "allowBlobPublicAccess": "[variables('allowBlobPublicAccessAFS')]",
+                "allowSharedKeyAccess": "[variables('allowSharedKeyAccessAFS')]",
+                "allowCrossTenantReplication": "[variables('allowCrossTenantReplicationAFS')]",
+                "defaultToOAuthAuthentication": "[variables('defaultOAuthAFS')]",
+                "allowedCopyScope": "[variables('allowedCopyScopeAFS')]",
+                "networkAcls": {
+                    "bypass": "[variables('networkAclsBypassAFS')]",
+                    "defaultAction": "[variables('networkAclsDefaultActionAFS')]",
+                    "ipRules": []
+                },
+                "dnsEndpointType": "[variables('dnsEndpointTypeAFS')]",
+                "largeFileSharesState": "[variables('largeFileSharesStateAFS')]",
+                "encryption": {
+                     "keySource": "[variables('keySourceAFS')]",
+                    "services": {
+                        "blob": {
+                            "enabled": "[variables('encryptionEnabledAFS')]"
+                        },
+                        "file": {
+                            "enabled": "[variables('encryptionEnabledAFS')]"
+                        },
+                        "table": {
+                            "enabled": "[variables('encryptionEnabledAFS')]"
+                        },
+                        "queue": {
+                            "enabled": "[variables('encryptionEnabledAFS')]"
+                        }
+                    },
+                    "requireInfrastructureEncryption": "[variables('infrastructureEncryptionEnabledAFS')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileservices",
+            "apiVersion": "2021-09-01",
+            "name": "[concat(variables('storageAccountNameAFS'), '/default')]",
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountNameAFS'))]"
+            ],
+            "properties": {
+                "shareDeleteRetentionPolicy": {
+                    "enabled": "[variables('isShareSoftDeleteEnabledAFS')]",
+                    "days": "[variables('shareSoftDeleteRetentionDaysAFS')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/privateEndpoints",
+            "apiVersion": "2021-05-01",
+            "name": "[variables('EndpointNameAFS')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "Name": "[variables('endpointNameAFS')]",
+                "Role": "[variables('endpointRoleAFS')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('endpointCostAFS')]",
+                "Date": "[parameters('date')]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountNameAFS'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            ],
+            "properties": {
+                "subnet": {
+                    "id": "[resourceId(parameters('vnetRG'), 'Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"
+                },
+                "privateLinkServiceConnections": [
+                    {
+                        "name": "[variables('endpointNameAFS')]",
+                        "properties": {
+                            "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountNameAFS'))]",
+                            "groupIds": [
+                                "file"
+                            ]
+                        }
+                    }   
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/privateDnsZones",
+            "apiVersion": "2020-06-01",
+            "name": "[variables('privateDnsZoneAFS')]",
+            "location": "global",
+             "tags": {
+                "Name": "[variables('privateDnsZoneAFS')]",
+                "Role": "[variables('privateDnsZoneRoleAFS')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('privateDnsZoneCostAFS')]",
+                "Date": "[parameters('date')]"
+            },
+            "dependsOn": [
+                "[resourceId(parameters('vnetRG'), 'Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            ],
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+            "apiVersion": "2020-06-01",
+            "name": "[variables('endpointLinkNameAFS')]",
+            "location": "global",
+             "tags": {
+                "Name": "[variables('endpointLinkNameAFS')]",
+                "Role": "[variables('endpointLinkRoleAFS')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('endpointLinkCostAFS')]",
+                "Date": "[parameters('date')]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneAFS'))]",
+                "[resourceId(parameters('vnetRG'), 'Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            ],
+            "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                    "id": "[resourceId(parameters('vnetRG'), 'Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+            "apiVersion": "2020-03-01",
+            "name": "[concat(variables('endpointNameAFS'), '/', 'default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', variables('endpointNameAFS'))]",
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('privateDnsZoneAFS'))]"
+            ],
+            "location": "[resourceGroup().Location]",
+            "properties": {
+                "privateDnsZoneConfigs": [
+                    {
+                        "name": "[variables('privateDnsZoneAFS')]",
+                        "properties": {
+                            "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones',variables('privateDnsZoneAFS'))]"
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {}
+}
