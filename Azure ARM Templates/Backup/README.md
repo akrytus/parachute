@@ -1,20 +1,20 @@
-# Introduction 
+# Deploy Azure Backup Policies
 
-## Azure Backup Policies
+## Introduction
 ARM Templates designed to automate Azure deployments and implement Parachute standards and best practices.
 
-# Prerequisites
+## Prerequisites
    1. Existing Azure Recover Services Vault
    2. Vault Name
 
-# Resources
+## Resources
    1. Backup Policies
         *  Default-Server-Policy
         *  DC-Server-Policy
         *  AVD-Personal-Policy
         *  Azure-Files-Policy
 
-# Build and Deploy
+## Build and Deploy
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)]( https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fakrytus%2Fparachute%2Fmain%2FAzure%2520ARM%2520Templates%2FBackup%2FDeploy-BackupPolicies.json)
 
 
@@ -28,5 +28,5 @@ ARM Templates designed to automate Azure deployments and implement Parachute sta
 7.  Click "**Create**"
 
 
-# Contribute
+## Contribute
 If you notice that there are errors or you have suggestions please submit them to akrytus@parachutetechs.com 
