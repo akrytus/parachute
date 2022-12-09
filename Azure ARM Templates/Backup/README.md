@@ -16,13 +16,13 @@ ARM Templates designed to automate Azure deployments and implement Parachute sta
 
 
 
-1.  Click "Deploy to Azure" button
-2.  Select "Subscription"
-3.  Select "Resource Group"
-4.  Enter your "Email Address"
-5.  Enter "Vault Name"
-6.  Click "Review + Create" (Wait for verification)
-7.  Click "Create"
+1.  Click "**Deploy to Azure**" button
+2.  Select "**Subscription**"
+3.  Select "**Resource Group**"
+4.  Enter your "**Email Address**"
+5.  Enter "**Vault Name**"
+6.  Click "**Review + Create**" (Wait for verification)
+7.  Click "**Create**"
 
 
 # Contribute
