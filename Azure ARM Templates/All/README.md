@@ -4,13 +4,13 @@ This template is designed to deploy all the default resources needed for every c
 
 # Resources
 This template will deploy the following resources:
-    - Vnet with subnets (Gateway,Bastion,Defualt,AVD)
-    - 
+   - Vnet with subnets (Gateway,Bastion,Defualt,AVD)
+    
 
 # Warning
-- Azure WestUS2 is no longer a reliable location.  
-    - Virtual Machine sizes are depleated and will become a road block.
-    - Azure WestUS3 is my recommandation for new clients, however there are currently some limitations.
+Azure WestUS2 is no longer a reliable location.  
+   - Virtual Machine sizes are depleated and will become a road block.
+   - Azure WestUS3 is my recommandation for new clients, however there are currently some limitations.
 
 Kown WestUS3 limitations:
    - Inventory and Change Tracking using Automation accounts is not available 
