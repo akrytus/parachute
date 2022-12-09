@@ -7,7 +7,7 @@ ARM Templates designed to automate Azure deployments and implement Parachute sta
    1. Existing Azure Recover Services Vault
    2. Vault Name
 
-## Resources
+## Resources that will be deployed
    1. Backup Policies
         *  Default-Server-Policy
         *  DC-Server-Policy
