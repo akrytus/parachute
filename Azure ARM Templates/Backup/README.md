@@ -1,6 +1,9 @@
 # Introduction 
 ARM Templates designed to automate Azure deployments and implement Parachute standards and best practices.
 
+# Prerequisites
+   1. Backup Recover Services Vault Name
+
 # Resources
    1. Backup Policies
         *  Default-Server-Policy
@@ -14,10 +17,10 @@ ARM Templates designed to automate Azure deployments and implement Parachute sta
 
 
 1.  Click "Deploy to Azure" button
-2.  Click "Build your own template in the editor"
-3.  Paste the code over existing code
-4.  Click "Save"
-5.  Fill out the form including {Subscription} and {Resource Group}
+2.  Select "Subscription"
+3.  Select "Resource Group"
+4.  Enter your "Email Address"
+5.  Enter "Vault Name"
 6.  Click "Review + Create" (Wait for verification)
 7.  Click "Create"
 
