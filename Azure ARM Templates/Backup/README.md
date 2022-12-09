@@ -3,7 +3,7 @@ ARM Templates designed to automate Azure deployments and implement Parachute sta
 This template is designed to deploy all the default resources needed for every client.
 
 Kown WestUS3 limitations:
-    - Inventory and Change Tracking using Automation accounts is not available 
+   - Inventory and Change Tracking using Automation accounts is not available 
         *  Deploying Log Analytics and the Automation Account into WestUS2 is a viable workaround
         *  Location of the resources reporting to Log Analytics is irrelevant and has no impact
 
