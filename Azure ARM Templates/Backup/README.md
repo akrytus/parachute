@@ -1,8 +1,10 @@
 # Introduction 
+## Azure Backup Policies
 ARM Templates designed to automate Azure deployments and implement Parachute standards and best practices.
 
 # Prerequisites
-   1. Backup Recover Services Vault Name
+   1. Existing Azure Recover Services Vault
+   2. Vault Name
 
 # Resources
    1. Backup Policies
