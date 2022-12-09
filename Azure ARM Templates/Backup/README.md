@@ -9,7 +9,9 @@ ARM Templates designed to automate Azure deployments and implement Parachute sta
         *  Azure-Files-Policy
 
 # Build and Deploy
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)]( https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fgithub.com%2Fakrytus%2Fparachute%2Fblob%2Fmain%2FAzure%2520ARM%2520Templates%2FBackup%2FDeploy-BackupPolicies.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https%3A%2F%2Fraw.githubusercontent.com%2Fakrytus%2Fparachute%2Fmain%2FAzure%2520ARM%2520Templates%2FBackup%2FDeploy-BackupPolicies.json)![image](https://user-images.githubusercontent.com/30179848/206800064-afe0370a-23fe-4d68-b5cb-7b73f5964f8f.png)
+
+
 
 1.  Click "Deploy to Azure" button
 2.  Click "Build your own template in the editor"
