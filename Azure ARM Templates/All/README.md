@@ -13,10 +13,9 @@ This template will deploy the following resources:
     - Azure WestUS3 is my recommandation for new clients, however there are currently some limitations.
 
 Kown WestUS3 limitations:
-    - Inventory and Change Tracking using Automation accounts is not available 
+   - Inventory and Change Tracking using Automation accounts is not available 
         *  Deploying Log Analytics and the Automation Account into WestUS2 is a viable workaround
         *  Location of the resources reporting to Log Analytics is irrelevant and has no impact
-
 
 # Getting Started
 1.	Choose your deployment type (All or individual resources)
