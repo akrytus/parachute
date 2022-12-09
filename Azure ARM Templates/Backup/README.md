@@ -8,11 +8,6 @@ Kown WestUS3 limitations:
         *  Location of the resources reporting to Log Analytics is irrelevant and has no impact
 
 # Resources
-    - Inventory and Change Tracking using Automation accounts is not available 
-        *  Deploying Log Analytics and the Automation Account into WestUS2 is a viable workaround
-        *  Location of the resources reporting to Log Analytics is irrelevant and has no impact
-
-# Resources
    1. Backup Policies
         *  Default-Server-Policy
         *  DC-Server-Policy
