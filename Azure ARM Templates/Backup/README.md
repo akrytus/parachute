@@ -13,7 +13,7 @@ Kown WestUS3 limitations:
         *  Location of the resources reporting to Log Analytics is irrelevant and has no impact
 
 # Resources
-    1. Backup Policies
+   1. Backup Policies
         *  Default-Server-Policy
         *  DC-Server-Policy
         *  AVD-Personal-Policy
