@@ -8,7 +8,7 @@ This template will deploy the following resources:
     - 
 
 # Warning
-Azure WestUS2 is no longer a reliable location.  
+- Azure WestUS2 is no longer a reliable location.  
     - Virtual Machine sizes are depleated and will become a road block.
     - Azure WestUS3 is my recommandation for new clients, however there are currently some limitations.
 
