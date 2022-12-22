@@ -1,11 +1,58 @@
-# Introduction 
-ARM Templates designed to automate Azure deployments and implement Parachute standards and best practices.
-This template is designed to deploy all the default resources needed for every client.
+# Deploy All Azure Resources
 
-# Resources
-This template will deploy the following resources:
-   - Vnet with subnets (Gateway,Bastion,Defualt,AVD)
-    
+## Purpose
+   - Deploy all minimum required Azure resources to a new Azure Subscription
+   - This includes Parachute's standards and best practices
+
+## Prerequisites
+   1. Azure Subscription
+   
+
+## Resources that will be deployed
+   1. Virtual Network
+      *  Default Subnet
+      *  Gateway Subnet
+      *  Bastion Subnet
+      *  AVD Subnet
+   2. Network Security Groups
+      *  Default Subnet NSG
+      *  Default AVD Subnet
+   3. VPN Gateway 
+   4. Public IPs
+      * Gateway PIP
+      * Bastion PIP
+   5. Bastion
+   6. Local Gateway
+      * Connection
+   7. Storage Accounts
+      * VM Diagnostics
+      * AVD Diagnostics
+   8. Recovery Services Vault
+   9. Backup Policies
+      *  Default-Server-Policy
+      *  DC-Server-Policy
+      *  AVD-Personal-Policy
+      *  Azure-Files-Policy
+   10. Log Analytics
+      * Automation Account
+   11. Virtual Machines
+      * DC-01
+      * DC-02
+
+
+## Build and Deploy
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)]( https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fakrytus%2Fparachute%2Fmain%2FAzure%2520ARM%2520Templates%2FBackup%2FDeploy-BackupPolicies.json)
+
+
+
+1.  Click "**Deploy to Azure**" button
+2.  Select "**Subscription**"
+3.  Select "**Resource Group**"
+4.  Enter your "**Email Address**"
+5.  Enter "**Vault Name**"
+6.  Click "**Review + Create**" (Wait for verification)
+7.  Click "**Create**"
+
 
 # Warning
 Azure WestUS2 is no longer a reliable location.  
@@ -16,24 +63,6 @@ Kown WestUS3 limitations:
    - Inventory and Change Tracking using Automation accounts is not available 
         *  Deploying Log Analytics and the Automation Account into WestUS2 is a viable workaround
         *  Location of the resources reporting to Log Analytics is irrelevant and has no impact
-
-# Getting Started
-1.	Choose your deployment type (All or individual resources)
-    - All will deploy all the resources at once
-    - All [custom] will deploy typical bundles of resources at once
-    - Deploy [resource] will deploy individual resources 
-2.	Copy the code
-
-
-# Build and Deploy
-1.  Open "Deploy a custom deployment" from the Azure Portal
-2.  Click "Build your own template in the editor"
-3.  Paste the code over existing code
-4.  Click "Save"
-5.  Fill out the form including {Subscription} and {Resource Group}
-6.  Click "Review + Create" (Wait for verification)
-7.  Click "Create"
-
 
 # Contribute
 If you notice that there are errors or you have suggestions please submit them to akrytus@parachutetechs.com 
