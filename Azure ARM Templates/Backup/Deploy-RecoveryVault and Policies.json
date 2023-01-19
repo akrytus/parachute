@@ -49,7 +49,15 @@
         "afsWorkloadType": "AzureFileShare",
         "afsSchedule": {"schedulePolicyType":"SimpleSchedulePolicy","scheduleRunFrequency":"Daily","scheduleRunDays":null,"scheduleRunTimes":["2022-01-20T20:00:00.000Z"]},
         "afsRetention": {"retentionPolicyType":"LongTermRetentionPolicy","dailySchedule":{"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":30,"durationType":"Days"}},"weeklySchedule":{"daysOfTheWeek":["Sunday"],"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":4,"durationType":"Weeks"}},"monthlySchedule":{"retentionScheduleFormatType":"Weekly","retentionScheduleDaily":null,"retentionScheduleWeekly":{"daysOfTheWeek":["Sunday"],"weeksOfTheMonth":["First"]},"retentionTimes":["2022-01-20T20:00:00.000Z"],"retentionDuration":{"count":6,"durationType":"Months"}},"yearlySchedule":null},
-        "afsrole": "Policy for Azure Files"
+        "afsrole": "Policy for Azure Files",
+
+        "sqlPolicyName": "SQL-Server-Policy",
+        "sqlBackupManagementType": "AzureWorkload",
+        "sqlWorkloadType": "SQLDataBase",
+        "sqlSchedule": {"schedulePolicyType":"SimpleSchedulePolicy","scheduleRunFrequency":"Daily","scheduleRunDays":null,"scheduleRunTimes":["2022-01-20T20:00:00.000Z"]},
+        "sqlSettings" : {"issqlcompression":true,"isCompression":true},
+        "sqlProtectionList": [{"policyType":"Full","schedulePolicy":{"schedulePolicyType":"SimpleSchedulePolicy","scheduleRunFrequency":"Daily","scheduleRunDays":null,"scheduleRunTimes":["2022-12-05T18:00:00.000Z"]},"retentionPolicy":{"retentionPolicyType":"LongTermRetentionPolicy","dailySchedule":{"retentionTimes":["2022-12-05T18:00:00.000Z"],"retentionDuration":{"count":30,"durationType":"Days"}},"weeklySchedule":{"daysOfTheWeek":["Sunday"],"retentionTimes":["2022-12-05T18:00:00.000Z"],"retentionDuration":{"count":8,"durationType":"Weeks"}},"monthlySchedule":{"retentionScheduleFormatType":"Weekly","retentionScheduleDaily":null,"retentionScheduleWeekly":{"daysOfTheWeek":["Sunday"],"weeksOfTheMonth":["First"]},"retentionTimes":["2022-12-05T18:00:00.000Z"],"retentionDuration":{"count":6,"durationType":"Months"}},"yearlySchedule":null},"tieringPolicy":{"ArchivedRP":{"tieringMode":"DoNotTier"}}},{"policyType":"Log","schedulePolicy":{"schedulePolicyType":"LogSchedulePolicy","scheduleFrequencyInMins":120},"retentionPolicy":{"retentionPolicyType":"SimpleRetentionPolicy","retentionDuration":{"count":14,"durationType":"Days"}}}],
+        "sqlrole": "Policy for SQL in Server"
     },
     "resources": [
         {
@@ -162,6 +170,29 @@
                 "schedulePolicy": "[variables('afsSchedule')]",
                 "timeZone": "[variables('timeZone')]",
                 "retentionPolicy": "[variables('afsRetention')]"
+            }
+        },
+        {
+            "type": "Microsoft.RecoveryServices/vaults/backupPolicies",
+            "apiVersion": "2016-06-01",
+            "name": "[concat(variables('vaultName'), '/', variables('sqlPolicyName'))]",
+            "dependsOn": [
+                "[concat('Microsoft.RecoveryServices/vaults/', variables('vaultName'))]"
+            ],
+            "tags": {
+                "Name": "[variables('sqlPolicyName')]",
+                "Role": "[variables('sqlrole')]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('backupCost')]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {
+                "backupManagementType": "[variables('sqlBackupManagementType')]",
+                "workloadType": "[variables('sqlWorkloadType')]",
+                "schedulePolicy": "[variables('sqlSchedule')]",
+                "timeZone": "[variables('timeZone')]",
+                "settings": "[variables('sqlSettings')]",
+                "subProtectionPolicy": "[variables('sqlProtectionList')]"
             }
         }
     ]
