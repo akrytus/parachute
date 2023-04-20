@@ -1,0 +1,117 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+     "parameters": {
+        "yourEmailAddress":{
+            "type": "string"
+        },
+        "customerPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Use 3-4 lowercase characters"
+            }
+        },
+        "paradminObjectId": {
+            "type": "string",
+            "metadata": {
+                "description": "Paradmin Object ID"
+            }
+        },
+       "secretValue": {
+            "type": "string",
+            "metadata": {
+                "description": "Secret Id of Registered App"
+            }
+        }
+    },
+    "variables": {
+        "resourceGroups":{
+            "testRestore":{
+                "name": "[concat(toupper(parameters('customerPrefix')),'-Test-Restore')]",
+                "location": "WestUS2",
+                "role": "Test Azure Backups",
+                "cost": "Backup"
+            }
+        },
+        "rbac":{
+            "testRestore":{
+                "name": "Backup Test Restore",
+                "description": "Create new VM from backup and test (Assigned to Automation Account)"
+            },
+            "psDeploy":{
+                "name": "Deploy Inline Script",
+                "description": "Deploy PowerShell script in ARM Templates (Assigned to Managed Identity)"
+            }
+        },
+        "managedIdentity": {
+            "name": "[concat(toupper(parameters('customerPrefix')),'-Test-Restore-MI')]",
+            "role": "Run ARM Template Inline Script"
+        },
+        "linkTemplates":{
+            "child2":{
+                "name": "linkedTemplate-Child2",
+                "uri": "https://publicaccessrepository.blob.core.windows.net/armtemplates/ABRT-Child2.json",
+                "description": "Creates AD Application, Keyvault, and Storage Accounts"
+            }
+        },
+        "accountName": "[concat(toupper(parameters('customerPrefix')),'-Test-Restore-Automation')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2021-04-01-preview",
+            "name": "[guid(variables('accountName'))]",
+            "dependsOn": [],
+            "properties": {
+                "roleDefinitionId": "[resourceId(subscription().subscriptionId, variables('resourceGroups').testRestore.name,'Microsoft.Authorization/roleDefinitions', guid(subscription().id, variables('rbac').testRestore.name))]",
+                "principalId": "[reference(resourceId(subscription().subscriptionId, variables('resourceGroups').testRestore.name, 'Microsoft.Automation/automationAccounts', variables('accountName')), '2022-08-08', 'Full').identity.principalId]"
+            }
+        },
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2021-04-01-preview",
+            "name": "[guid(variables('managedIdentity').name)]",
+            "dependsOn": [],
+            "properties": {
+                "roleDefinitionId": "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7",
+                "principalId": "[reference(resourceId(subscription().subscriptionId, variables('resourceGroups').testRestore.name, 'Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentity').name), '2023-01-31', 'Full').properties.principalId]"
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "name": "[variables('linkTemplates').child2.name]",
+            "resourceGroup": "[variables('resourceGroups').testRestore.name]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Authorization/roleAssignments', guid(variables('managedIdentity').name))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('linkTemplates').child2.uri]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "yourEmailAddress": {
+                        "value": "[parameters('yourEmailAddress')]"
+                    },
+                    "customerPrefix": {
+                        "value": "[parameters('customerPrefix')]"
+                    },
+                    "paradminObjectId": {
+                        "value": "[parameters('paradminObjectId')]"
+                    },
+                    "secretValue": {
+                        "value": "[parameters('secretValue')]"
+                    },
+                    "managedIdentity": {
+                        "value": "[variables('managedIdentity').name]"
+                    },
+                    "accountName": {
+                        "value": "[variables('accountName')]"
+                    }
+                } 
+            }
+        }
+    ]
+}

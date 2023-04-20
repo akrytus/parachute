@@ -1,0 +1,219 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "yourEmailAddress":{
+            "type": "string"
+        },
+        "customerPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Use 3-4 lowercase characters"
+            }
+        },
+        "date": {
+            "type": "string",
+             "defaultValue": "[utcNow('d')]" ,
+             "metadata": {
+                 "description": "DO NOT Edit!"
+            }
+        }
+    },
+    "variables": {
+        "resourceGroups":{
+            "testRestore":{
+                "name": "[concat(toupper(parameters('customerPrefix')),'-Test-Restore')]",
+                "location": "WestUS2",
+                "role": "Test Azure Backups",
+                "cost": "Backup"
+            }
+        },
+        "rbac":{
+            "testRestore":{
+                "name": "Backup Test Restore",
+                "description": "Create new VM from backup and test (Assigned to Automation Account)"
+            },
+            "psDeploy":{
+                "name": "Deploy Inline Script",
+                "description": "Deploy PowerShell script in ARM Templates (Assigned to Managed Identity)"
+            }
+        },
+        "linkTemplates":{
+            "child1":{
+                "name": "linkedTemplate-Child1",
+                "uri": "https://publicaccessrepository.blob.core.windows.net/armtemplates/ABRT-Child1.json",
+                "description": "Creates Managed Identity, Automation Account, and Runbook"
+            }
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/resourceGroups",
+            "apiVersion": "2022-09-01",
+            "name": "[variables('resourceGroups').testRestore.name]",
+            "location": "[variables('resourceGroups').testRestore.location]", 
+            "tags": {
+                "Name": "[variables('resourceGroups').testRestore.name]",
+                "Role": "[variables('resourceGroups').testRestore.role]",
+                "Owner": "[parameters('yourEmailAddress')]",
+                "Cost": "[variables('resourceGroups').testRestore.cost]",
+                "Date": "[parameters('date')]"
+            },
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "name": "[variables('linkTemplates').child1.name]",
+            "resourceGroup": "[variables('resourceGroups').testRestore.name]",
+            "dependsOn": [
+                "[variables('resourceGroups').testRestore.name]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('linkTemplates').child1.uri]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "yourEmailAddress": {
+                        "value": "[parameters('yourEmailAddress')]"
+                    },
+                    "customerPrefix": {
+                        "value": "[parameters('customerPrefix')]"
+                    }
+                } 
+            }
+        },
+        {
+            "type": "Microsoft.Authorization/roleDefinitions",
+            "apiVersion": "2018-07-01",
+            "name": "[guid(subscription().id, variables('rbac').testRestore.name)]",
+            "properties": {
+                "roleName": "[variables('rbac').testRestore.name]",
+                "description": "[variables('rbac').testRestore.description]",
+                "type": "customRole",
+                "permissions": [
+                    {
+                        "Actions": [
+                            "Microsoft.Authorization/*/read",
+
+                            "Microsoft.Compute/disks/write",
+                            "Microsoft.Compute/disks/read",
+                            "Microsoft.Compute/disks/delete",
+       
+                            "Microsoft.Compute/virtualMachines/write",
+                            "Microsoft.Compute/virtualMachines/read",
+                            "Microsoft.Compute/virtualMachines/delete",
+                            "Microsoft.Compute/virtualMachines/runCommand/action",
+                            
+                            "Microsoft.DomainRegistration/domains/write",
+
+                            "Microsoft.Network/networkInterfaces/read",
+                            "Microsoft.Network/networkInterfaces/delete",
+                            
+                            "Microsoft.Network/virtualNetworks/read",
+                            "Microsoft.Network/virtualNetworks/subnets/read",
+                            "Microsoft.Network/virtualNetworks/subnets/join/action",
+                            
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/operationResults/read",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/operationResults/read",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/protectedItems/backup/action",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/protectedItems/operationResults/read",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/protectedItems/operationsStatus/read",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/protectedItems/read",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/protectedItems/recoveryPoints/provisionInstantItemRecovery/action",
+                            "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems/recoveryPoints/accessToken/action",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/protectedItems/recoveryPoints/read",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/protectedItems/recoveryPoints/restore/action",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/protectedItems/recoveryPoints/revokeInstantItemRecovery/action",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/protectedItems/write",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/read",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/refreshContainers/action",
+                            "Microsoft.RecoveryServices/Vaults/backupJobs/*",
+                            "Microsoft.RecoveryServices/Vaults/backupJobsExport/action",
+                            "Microsoft.RecoveryServices/Vaults/backupOperationResults/*",
+                            "Microsoft.RecoveryServices/Vaults/backupPolicies/operationResults/read",
+                            "Microsoft.RecoveryServices/Vaults/backupPolicies/read",
+                            "Microsoft.RecoveryServices/Vaults/backupProtectableItems/*",
+                            "Microsoft.RecoveryServices/Vaults/backupProtectedItems/read",
+                            "Microsoft.RecoveryServices/Vaults/backupProtectionContainers/read",
+                            "Microsoft.RecoveryServices/Vaults/backupUsageSummaries/read",
+                            "Microsoft.RecoveryServices/Vaults/certificates/write",
+                            "Microsoft.RecoveryServices/Vaults/extendedInformation/read",
+                            "Microsoft.RecoveryServices/Vaults/extendedInformation/write",
+                            "Microsoft.RecoveryServices/Vaults/monitoringAlerts/read",
+                            "Microsoft.RecoveryServices/Vaults/monitoringConfigurations/*",
+                            "Microsoft.RecoveryServices/Vaults/read",
+                            "Microsoft.RecoveryServices/Vaults/registeredIdentities/operationResults/read",
+                            "Microsoft.RecoveryServices/Vaults/registeredIdentities/read",
+                            "Microsoft.RecoveryServices/Vaults/registeredIdentities/write",
+                            "Microsoft.RecoveryServices/Vaults/usages/read",
+                            "Microsoft.Resources/deployments/*",
+                            "Microsoft.Resources/subscriptions/resourceGroups/read",
+                            "Microsoft.Storage/storageAccounts/read",
+                            "Microsoft.RecoveryServices/Vaults/backupstorageconfig/*",
+                            "Microsoft.RecoveryServices/Vaults/backupValidateOperation/action",
+                            "Microsoft.RecoveryServices/Vaults/backupTriggerValidateOperation/action",
+                            "Microsoft.RecoveryServices/Vaults/backupValidateOperationResults/read",
+                            "Microsoft.RecoveryServices/Vaults/backupValidateOperationsStatuses/read",
+                            "Microsoft.RecoveryServices/Vaults/backupOperations/read",
+                            "Microsoft.RecoveryServices/Vaults/backupPolicies/operations/read",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/write",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/inquire/action",
+                            "Microsoft.RecoveryServices/Vaults/backupEngines/read",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/backupProtectionIntent/write",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/backupProtectionIntent/read",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectableContainers/read",
+                            "Microsoft.RecoveryServices/Vaults/backupFabrics/protectionContainers/items/read",
+                            "Microsoft.RecoveryServices/locations/backupStatus/action",
+                            "Microsoft.RecoveryServices/locations/backupPreValidateProtection/action",
+                            "Microsoft.RecoveryServices/locations/backupValidateFeatures/action",
+                            "Microsoft.RecoveryServices/locations/backupAadProperties/read",
+                            "Microsoft.RecoveryServices/locations/backupCrrJobs/action",
+                            "Microsoft.RecoveryServices/locations/backupCrrJob/action",
+                            "Microsoft.RecoveryServices/locations/backupCrossRegionRestore/action",
+                            "Microsoft.RecoveryServices/locations/backupCrrOperationResults/read",
+                            "Microsoft.RecoveryServices/locations/backupCrrOperationsStatus/read",
+                            "Microsoft.RecoveryServices/Vaults/monitoringAlerts/write",
+                            "Microsoft.RecoveryServices/operations/read",
+                            "Microsoft.RecoveryServices/locations/operationStatus/read",
+                            "Microsoft.RecoveryServices/Vaults/backupProtectionIntents/read",
+                            "Microsoft.Support/*",
+                            "Microsoft.DataProtection/backupVaults/backupInstances/read",
+                            "Microsoft.DataProtection/backupVaults/backupInstances/read",
+                            "Microsoft.DataProtection/backupVaults/deletedBackupInstances/read",
+                            "Microsoft.DataProtection/backupVaults/backupPolicies/read",
+                            "Microsoft.DataProtection/backupVaults/backupPolicies/read",
+                            "Microsoft.DataProtection/backupVaults/backupInstances/recoveryPoints/read",
+                            "Microsoft.DataProtection/backupVaults/backupInstances/recoveryPoints/read",
+                            "Microsoft.DataProtection/backupVaults/backupInstances/findRestorableTimeRanges/action",
+                            "Microsoft.DataProtection/backupVaults/read",
+                            "Microsoft.DataProtection/backupVaults/operationResults/read",
+                            "Microsoft.DataProtection/backupVaults/operationStatus/read",
+                            "Microsoft.DataProtection/backupVaults/read",
+                            "Microsoft.DataProtection/backupVaults/read",
+                            "Microsoft.DataProtection/locations/operationStatus/read",
+                            "Microsoft.DataProtection/locations/operationResults/read",
+                            "Microsoft.DataProtection/operations/read",
+                            "Microsoft.DataProtection/backupVaults/validateForBackup/action",
+                            "Microsoft.DataProtection/backupVaults/backupInstances/backup/action",
+                            "Microsoft.DataProtection/backupVaults/backupInstances/validateRestore/action",
+                            "Microsoft.DataProtection/backupVaults/backupInstances/restore/action",
+                   
+                            "Microsoft.Storage/storageAccounts/write",
+                            
+                            "Microsoft.Resources/deployments/*",
+                            "Microsoft.Resources/subscriptions/resourceGroups/read",
+                            "Microsoft.Resources/subscriptions/resourceGroups/write"
+                        ],
+                        "NotActions": []
+                     }
+                ],
+                "assignableScopes": [
+                    "[subscription().id]"
+                ]
+            }
+        }
+    ]
+}
